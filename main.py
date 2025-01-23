@@ -3,14 +3,12 @@ import random
 
 import pygame
 
-pygame.init()
 WIDTH, HEIGHT = 900, 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-clock = pygame.time.Clock()
-
 PLAYER_SPEED = 15
 APPLE_SPEED = 4
 MAX_MISSED = 5
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
 
 class Player(pygame.sprite.Sprite):
@@ -44,6 +42,8 @@ class Apple(pygame.sprite.Sprite):
 class Game:
     def __init__(self):
         self.background = self.load_background()
+        self.clock = pygame.time.Clock()
+
         self.reset()
 
     def load_background(self):
@@ -101,12 +101,17 @@ class Game:
                     self.reset()
 
             pygame.display.flip()
-            clock.tick(60)
+            self.clock.tick(60)
+
+
+def main():
+    pygame.init()
+    game = Game()
+    game.main_loop()
 
 
 if __name__ == "__main__":
-    game = Game()
-    game.main_loop()
+    main()
 
 # git add .
 # git commit -m "Обновление функционала"
