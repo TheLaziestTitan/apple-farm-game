@@ -107,3 +107,7 @@ class Game:
 if __name__ == "__main__":
     game = Game()
     game.main_loop()
+
+# git add .
+# git commit -m "Обновление функционала"
+# git push
