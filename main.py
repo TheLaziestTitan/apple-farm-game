@@ -3,8 +3,8 @@ import random
 import sqlite3
 import pygame
 
-WIDTH, HEIGHT = 900, 600
-PLAYER_SPEED = 15
+WIDTH, HEIGHT = 1000, 600
+PLAYER_SPEED = 10
 MAX_MISSED = 5
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -24,7 +24,7 @@ def load_apple_data():
         filename = data[1].split(' ', 1)[-1].strip()
         path = os.path.join("assets", filename)
         points = int(data[2])
-        speed = {"slow": 2, "medium": 4, "fast": 6}.get(data[3].lower(), 4)
+        speed = {"slow": 3.5, "medium": 4, "fast": 6}.get(data[3].lower(), 4)
         cleaned_data.append((apple_id, path, points, speed, float(data[4])))
     return cleaned_data
 
