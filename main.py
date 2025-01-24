@@ -1,14 +1,36 @@
 import os
 import random
-
+import sqlite3
 import pygame
 
 WIDTH, HEIGHT = 900, 600
 PLAYER_SPEED = 15
-APPLE_SPEED = 4
 MAX_MISSED = 5
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
+
+
+def load_apple_data():
+    conn = sqlite3.connect('apple_farm.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT apple_id, image_path, points, fall_speed, spawn_rate FROM apples")
+    apples_data = cursor.fetchall()
+    conn.close()
+
+    cleaned_data = []
+    for data in apples_data:
+        apple_id = int(data[0])
+        filename = data[1].split(' ', 1)[-1].strip()
+        path = os.path.join("assets", filename)
+        points = int(data[2])
+        speed = {"slow": 2, "medium": 4, "fast": 6}.get(data[3].lower(), 4)
+        cleaned_data.append((apple_id, path, points, speed, float(data[4])))
+    return cleaned_data
+
+
+APPLE_DATA = load_apple_data()
+SPAWN_WEIGHTS = [data[4] for data in APPLE_DATA]
 
 
 class Player(pygame.sprite.Sprite):
@@ -27,15 +49,25 @@ class Player(pygame.sprite.Sprite):
 class Apple(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface((50, 50))
-        self.image.fill((200, 0, 0))
-        self.rect = self.image.get_rect(topleft=(random.randint(0, WIDTH - 30), -20))
+        self.type_data = random.choices(APPLE_DATA, weights=SPAWN_WEIGHTS, k=1)[0]
+        self.apple_id = self.type_data[0]
+
+        try:
+            self.image = pygame.image.load(self.type_data[1]).convert_alpha()
+            self.image = pygame.transform.scale(self.image, (50, 50))
+        except Exception as e:
+            self.image = pygame.Surface((50, 50))
+            self.image.fill((200, 0, 0))
+
+        self.rect = self.image.get_rect(topleft=(random.randint(0, WIDTH - 50), -20))
+        self.points = self.type_data[2]
+        self.fall_speed = self.type_data[3]
 
     def update(self):
-        self.rect.y += APPLE_SPEED
+        self.rect.y += self.fall_speed
         if self.rect.top > HEIGHT:
             self.kill()
-            return True
+            return self.apple_id == 1
         return False
 
 
@@ -43,7 +75,6 @@ class Game:
     def __init__(self):
         self.background = self.load_background()
         self.clock = pygame.time.Clock()
-
         self.reset()
 
     def load_background(self):
@@ -84,8 +115,9 @@ class Game:
                     self.all_sprites.add(apple)
 
                 self.missed += sum(apple.update() for apple in self.apples)
+
                 hits = pygame.sprite.spritecollide(self.player, self.apples, True)
-                self.score += len(hits)
+                self.score += sum(apple.points for apple in hits)
 
                 if self.missed >= MAX_MISSED:
                     self.running = False
