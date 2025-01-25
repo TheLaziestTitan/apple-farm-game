@@ -1,14 +1,14 @@
 import os
 import random
 import sqlite3
+
 import pygame
 
-WIDTH, HEIGHT = 1000, 600
+WIDTH, HEIGHT = 1050, 600
 PLAYER_SPEED = 10
 MAX_MISSED = 5
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-
 
 
 def load_apple_data():
