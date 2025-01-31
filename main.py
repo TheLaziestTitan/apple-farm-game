@@ -1,10 +1,11 @@
 import os
 import random
 import sqlite3
+import sys
 
 import pygame
 
-WIDTH, HEIGHT = 1050, 600
+WIDTH, HEIGHT = 1050, 591
 PLAYER_SPEED = 10
 MAX_MISSED = 5
 
@@ -55,7 +56,7 @@ class Apple(pygame.sprite.Sprite):
         try:
             self.image = pygame.image.load(self.type_data[1]).convert_alpha()
             self.image = pygame.transform.scale(self.image, (50, 50))
-        except Exception as e:
+        except:
             self.image = pygame.Surface((50, 50))
             self.image.fill((200, 0, 0))
 
@@ -136,8 +137,46 @@ class Game:
             self.clock.tick(60)
 
 
+def terminate():
+    pygame.quit()
+    sys.exit()
+
+
+def start_screen():
+    intro_text = [
+        "Чтобы начать, нажмите на любую кнопку."
+    ]
+
+    try:
+        fon = pygame.transform.scale(pygame.image.load(os.path.join('assets', 'menu.png')),
+                                     (WIDTH, HEIGHT))
+    except:
+        fon = pygame.Surface((WIDTH, HEIGHT))
+        fon.fill((100, 200, 100))
+
+    screen.blit(fon, (0, 0))
+
+    font = pygame.font.Font(None, 45)
+    text_coord = 30
+
+    for line in intro_text:
+        text = font.render(line, True, (0, 0, 0))
+        text_rect = text.get_rect(center=(WIDTH / 2, text_coord))
+        screen.blit(text, text_rect)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type in [pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN]:
+                return
+        pygame.display.flip()
+        pygame.time.Clock().tick(60)
+
+
 def main():
     pygame.init()
+    start_screen()
     game = Game()
     game.main_loop()
 
