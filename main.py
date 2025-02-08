@@ -44,12 +44,12 @@ class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         try:
-            self.spritesheet = pygame.image.load(os.path.join('assets', 'farmer.png')).convert_alpha()
+            self.spritesheet = pygame.image.load(os.path.join('assets', 'farmer2.png')).convert_alpha()
         except:
             self.spritesheet = pygame.Surface((400, 150))
             self.spritesheet.fill((0, 255, 0))
 
-        self.frame_width = 247
+        self.frame_width = 222
         self.frame_height = 248
         total_frames = self.spritesheet.get_width() // self.frame_width
 
@@ -124,7 +124,6 @@ class Apple(pygame.sprite.Sprite):
             self.kill()
             return self.apple_id == 1
         return False
-
 
 
 class Button(pygame.sprite.Sprite):
@@ -295,7 +294,7 @@ class Game:
         self.end_image = self.load_end_image()
         self.clock = pygame.time.Clock()
         self.info_system = InfoWindow()
-        pygame.mixer.music.set_volume(0.01)
+        pygame.mixer.music.set_volume(0.2)
 
         self.ui_elements = pygame.sprite.Group()
         self.info_btn = Button(
