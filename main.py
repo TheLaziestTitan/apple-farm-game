@@ -41,18 +41,19 @@ SPAWN_WEIGHTS = [data[4] for data in APPLE_DATA]
 
 
 class Player(pygame.sprite.Sprite):
+
     def __init__(self):
         super().__init__()
         try:
             self.spritesheet = pygame.image.load(os.path.join('assets', 'farmer2.png')).convert_alpha()
-        except:
+        except FileNotFoundError:
             self.spritesheet = pygame.Surface((400, 150))
             self.spritesheet.fill((0, 255, 0))
 
+        # Animation setup
         self.frame_width = 222
         self.frame_height = 248
         total_frames = self.spritesheet.get_width() // self.frame_width
-
         self.frames_right = [
             self.spritesheet.subsurface(pygame.Rect(i * self.frame_width, 0, self.frame_width, self.frame_height))
             for i in range(min(5, total_frames))
@@ -67,12 +68,13 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(WIDTH // 2, HEIGHT - 150))
 
     def catch_apple(self, apple):
+        """Обрабатывает пойманное яблоко и воспроизводит звук."""
         apple.catch_sound.play()
         return apple.points
 
     def update(self, keys):
+        """Обновляет позицию игрока и его анимацию."""
         moving = False
-
         if keys[pygame.K_LEFT]:
             self.rect.x -= PLAYER_SPEED
             self.direction = 'right'
@@ -87,11 +89,8 @@ class Player(pygame.sprite.Sprite):
             if now - self.last_update > self.animation_speed * 1000:
                 self.last_update = now
                 self.current_frame = (self.current_frame + 1) % len(self.frames_right)
-
-            if self.direction == 'right':
-                self.image = self.frames_right[self.current_frame]
-            else:
-                self.image = self.frames_left[self.current_frame]
+                self.image = self.frames_right[self.current_frame] if self.direction == 'right' else self.frames_left[
+                    self.current_frame]
         else:
             self.current_frame = 0
             self.image = self.frames_right[0] if self.direction == 'right' else self.frames_left[0]
@@ -129,7 +128,7 @@ class Apple(pygame.sprite.Sprite):
 class Button(pygame.sprite.Sprite):
     def __init__(self, x, y, image_path, action):
         super().__init__()
-        self.load_images(image_path)  # Передаем полный путь к изображению
+        self.load_images(image_path)
         self.image = self.original_image
         self.rect = self.image.get_rect(center=(x, y))
         self.action = action
@@ -137,28 +136,23 @@ class Button(pygame.sprite.Sprite):
 
     def load_images(self, image_path):
         try:
-            # Загружаем изображение
             self.original_image = pygame.image.load(image_path).convert_alpha()
 
-            # Масштабируем только иконку информации
             if "info_icon" in image_path:
                 self.original_image = pygame.transform.scale(self.original_image, (50, 50))  # Размер 40x40
 
-            # Автогенерация hover-изображения
             base, ext = os.path.splitext(image_path)
             hover_path = f"{base}2{ext}"
 
             if os.path.exists(hover_path):
                 self.hover_image = pygame.image.load(hover_path).convert_alpha()
                 if "info_icon" in image_path:
-                    self.hover_image = pygame.transform.scale(self.hover_image,
-                                                              (40, 40))  # Масштабируем hover-изображение
+                    self.hover_image = pygame.transform.scale(self.hover_image, (40, 40))
             else:
                 self.hover_image = self.original_image.copy()
 
         except:
-            # Создаем заглушки
-            size = (200, 50) if "btn" in image_path else (40, 40)  # Размер для иконки информации
+            size = (200, 50) if "btn" in image_path else (40, 40)
             color = (0, 128, 0) if "easy" in image_path else \
                 (128, 0, 0) if "hard" in image_path else \
                     (255, 200, 0) if "info" in image_path else \
@@ -191,7 +185,6 @@ class InfoWindow:
             self.background = pygame.Surface((600, 400), pygame.SRCALPHA)
             self.background.fill((30, 30, 30, 220))
 
-        # Кнопка закрытия
         self.close_btn = Button(
             x=WIDTH // 2 + 200,
             y=HEIGHT // 2 - 150,
@@ -199,18 +192,35 @@ class InfoWindow:
             action=self.toggle_info
         )
 
+        self.rules_text = [
+            "Правила игры:",
+            "1. Ловите яблоки, падающие сверху.",
+            "2. Управляйте фермером стрелками ВЛЕВО и ВПРАВО.",
+            "3. Не пропустите более 5 яблок.",
+            "4. Нажмите R, чтобы перезапустить игру."
+        ]
+
     def toggle_info(self):
+        """Переключение видимости информационного окна."""
         self.show_info = not self.show_info
 
     def draw(self, screen):
         if self.show_info:
-            # Затемнение фона
             dim = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
             dim.fill((0, 0, 0, 180))
             screen.blit(dim, (0, 0))
 
-            # Отрисовка окна
             screen.blit(self.background, (WIDTH // 2 - 300, HEIGHT // 2 - 200))
+
+            font = pygame.font.Font(None, 30)
+            text_y = HEIGHT // 2 - 80
+            for line in self.rules_text:
+                text_surface = font.render(line, True, (0, 0, 0))
+                text_x = WIDTH // 2 - text_surface.get_width() // 2
+                screen.blit(text_surface, (text_x, text_y))
+                text_y += 40
+
+
             screen.blit(self.close_btn.image, self.close_btn.rect)
 
     def handle_events(self, event):
@@ -244,7 +254,6 @@ def start_screen():
 
     buttons = pygame.sprite.Group()
 
-    # Кнопка информации (правый верх)
     buttons.add(Button(
         x=WIDTH - 40,
         y=40,
@@ -252,7 +261,6 @@ def start_screen():
         action=info_window.toggle_info
     ))
 
-    # Кнопки выбора сложности
     buttons.add(Button(
         x=WIDTH // 2 - 150,
         y=HEIGHT // 2 + 90,
@@ -295,16 +303,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.info_system = InfoWindow()
         pygame.mixer.music.set_volume(0.2)
-
         self.ui_elements = pygame.sprite.Group()
-        self.info_btn = Button(
-            x=WIDTH - 50,
-            y=30,
-            image_path=os.path.join('assets', 'info_icon.png'),
-            action=self.info_system.toggle_info
-        )
-        self.ui_elements.add(self.info_btn)
-
         self.reset()
 
     def load_background(self):
@@ -359,7 +358,9 @@ class Game:
                 self.missed += sum(apple.update() for apple in self.apples)
 
                 hits = pygame.sprite.spritecollide(self.player, self.apples, True)
-                self.score += sum(apple.points for apple in hits)
+                for apple in hits:
+                    self.score += apple.points
+                    self.player.catch_apple(apple)
 
                 if self.missed >= MAX_MISSED:
                     self.running = False
@@ -388,6 +389,7 @@ def terminate():
 
 def main():
     pygame.init()
+    pygame.display.set_caption('Яблочная ферма')
     while True:
         difficulty = start_screen()
         game = Game(difficulty)
@@ -397,6 +399,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-# git add .
-# git commit -m "Обновление функционала"
-# git push
+
