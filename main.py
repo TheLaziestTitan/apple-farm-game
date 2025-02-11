@@ -13,7 +13,6 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
 
 def load_apple_data():
-    """Загрузка данных о яблоках из базы данных."""
     conn = sqlite3.connect('apple_farm.db')
     cursor = conn.cursor()
     cursor.execute("SELECT apple_id, image_path, points, fall_speed, spawn_rate, music_path FROM apples")
@@ -50,9 +49,8 @@ class Player(pygame.sprite.Sprite):
             self.spritesheet = pygame.Surface((400, 150))
             self.spritesheet.fill((0, 255, 0))
 
-        # Animation setup
-        self.frame_width = 222
-        self.frame_height = 248
+        self.frame_width = 210
+        self.frame_height = 250
         total_frames = self.spritesheet.get_width() // self.frame_width
         self.frames_right = [
             self.spritesheet.subsurface(pygame.Rect(i * self.frame_width, 0, self.frame_width, self.frame_height))
@@ -68,12 +66,10 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(WIDTH // 2, HEIGHT - 150))
 
     def catch_apple(self, apple):
-        """Обрабатывает пойманное яблоко и воспроизводит звук."""
         apple.catch_sound.play()
         return apple.points
 
     def update(self, keys):
-        """Обновляет позицию игрока и его анимацию."""
         moving = False
         if keys[pygame.K_LEFT]:
             self.rect.x -= PLAYER_SPEED
@@ -139,7 +135,7 @@ class Button(pygame.sprite.Sprite):
             self.original_image = pygame.image.load(image_path).convert_alpha()
 
             if "info_icon" in image_path:
-                self.original_image = pygame.transform.scale(self.original_image, (50, 50))  # Размер 40x40
+                self.original_image = pygame.transform.scale(self.original_image, (50, 50))
 
             base, ext = os.path.splitext(image_path)
             hover_path = f"{base}2{ext}"
@@ -180,9 +176,9 @@ class InfoWindow:
     def init_resources(self):
         try:
             self.background = pygame.image.load(os.path.join('assets', 'menu_info.png')).convert_alpha()
-            self.background = pygame.transform.scale(self.background, (600, 450))
+            self.background = pygame.transform.scale(self.background, (605, 478))
         except:
-            self.background = pygame.Surface((600, 400), pygame.SRCALPHA)
+            self.background = pygame.Surface((605, 478), pygame.SRCALPHA)
             self.background.fill((30, 30, 30, 220))
 
         self.close_btn = Button(
@@ -196,12 +192,16 @@ class InfoWindow:
             "Правила игры:",
             "1. Ловите яблоки, падающие сверху.",
             "2. Управляйте фермером стрелками ВЛЕВО и ВПРАВО.",
-            "3. Не пропустите более 5 яблок.",
-            "4. Нажмите R, чтобы перезапустить игру."
+            "3. Не пропустите более 5 красных яблок.",
+            "4. Нажмите R, чтобы перезапустить игру.",
+            "P.S. Красное яблоко 2 очка",
+            "     Зелёное яблоко 6 очков",
+            "     Золотое яблоко 10 очков",
+            "     Алмазное яблоко 20 очков",
+            "     Гнилое яблоко(серое) -10 очков"
         ]
 
     def toggle_info(self):
-        """Переключение видимости информационного окна."""
         self.show_info = not self.show_info
 
     def draw(self, screen):
@@ -213,13 +213,12 @@ class InfoWindow:
             screen.blit(self.background, (WIDTH // 2 - 300, HEIGHT // 2 - 200))
 
             font = pygame.font.Font(None, 30)
-            text_y = HEIGHT // 2 - 80
+            text_y = HEIGHT // 2 - 120
             for line in self.rules_text:
                 text_surface = font.render(line, True, (0, 0, 0))
                 text_x = WIDTH // 2 - text_surface.get_width() // 2
                 screen.blit(text_surface, (text_x, text_y))
-                text_y += 40
-
+                text_y += 35
 
             screen.blit(self.close_btn.image, self.close_btn.rect)
 
@@ -295,6 +294,83 @@ def start_screen():
             return difficulty[0]
 
 
+class VictoryWindow:
+    def __init__(self):
+        self.show_victory = False
+        self.video_frames = []
+        self.current_frame = 0
+        self.frame_rate = 20
+        self.last_update = pygame.time.get_ticks()
+        self.victory_sound = None
+        self.show_background = False
+        self.animation_started = False
+        self.video_finished = False
+        self.music_stopped = False
+        self.init_resources()
+
+    def init_resources(self):
+        try:
+            self.background = pygame.image.load(os.path.join('assets', 'victory_bg.png')).convert_alpha()
+            self.background = pygame.transform.scale(self.background, (WIDTH, HEIGHT))
+        except:
+            self.background = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            self.background.fill((30, 220, 30, 220))
+
+        frame_index = 1
+        while True:
+            frame_path = os.path.join('assets', 'victory_frames', f'ezgif-frame-{frame_index:03d}.png')
+            if not os.path.exists(frame_path):
+                break
+            frame = pygame.image.load(frame_path).convert_alpha()
+            self.video_frames.append(frame)
+            frame_index += 1
+
+        try:
+            self.victory_sound = pygame.mixer.Sound(os.path.join('assets', 'victory_sound.wav'))
+        except:
+            self.victory_sound = pygame.mixer.Sound(buffer=b'')
+
+    def play_video(self):
+        self.show_background = True
+        self.animation_started = False
+        self.video_finished = False
+        self.current_frame = 0
+        self.music_stopped = False
+
+    def update(self, keys):
+        if self.show_background and keys[pygame.K_r]:
+            self.show_background = False
+            self.animation_started = True
+            self.victory_sound.play()
+            pygame.mixer.music.fadeout(1000)
+            self.music_stopped = True
+
+        if self.animation_started:
+            now = pygame.time.get_ticks()
+            if now - self.last_update > 1000 // self.frame_rate:
+                self.last_update = now
+                if self.current_frame < len(self.video_frames) - 1:
+                    self.current_frame += 1
+                else:
+                    self.video_finished = True
+
+    def draw(self, screen):
+        if self.show_victory:
+            if self.show_background:
+                screen.blit(self.background, (0, 0))
+            elif self.animation_started:
+                if self.video_frames:
+                    current_frame = self.video_frames[self.current_frame]
+                    screen.blit(current_frame, (
+                        WIDTH // 2 - current_frame.get_width() // 2,
+                        HEIGHT // 2 - current_frame.get_height() // 2
+                    ))
+                if self.video_finished:
+                    font = pygame.font.Font(None, 74)
+                    text = font.render("НАЖМИТЕ R ДЛЯ ВОЗВРАТА В МЕНЮ", True, (255, 215, 0))
+                    screen.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT - 100))
+
+
 class Game:
     def __init__(self, difficulty):
         self.difficulty = difficulty
@@ -302,9 +378,10 @@ class Game:
         self.end_image = self.load_end_image()
         self.clock = pygame.time.Clock()
         self.info_system = InfoWindow()
-        pygame.mixer.music.set_volume(0.2)
+        self.victory_window = VictoryWindow()
         self.ui_elements = pygame.sprite.Group()
         self.reset()
+        pygame.mixer.music.set_volume(0.2)
 
     def load_background(self):
         try:
@@ -322,21 +399,25 @@ class Game:
         except:
             return pygame.Surface((WIDTH, HEIGHT)).convert()
 
+    def show_text(self, text, size, y):
+        font = pygame.font.Font(None, size)
+        text_surface = font.render(text, True, (82, 30, 22))
+        screen.blit(text_surface, (WIDTH // 2 - text_surface.get_width() // 2, y))
+
     def reset(self):
         self.player = Player()
         self.apples = pygame.sprite.Group()
         self.all_sprites = pygame.sprite.Group(self.player)
         self.score = 0
         self.missed = 0
-        self.running = True
-
-    def show_text(self, text, size, y):
-        font = pygame.font.Font(None, size)
-        text_surface = font.render(text, True, (82, 30, 22))
-        screen.blit(text_surface, (WIDTH // 2 - text_surface.get_width() // 2, y))
+        self.game_state = "running"
+        self.victory_window.show_victory = False
+        self.victory_window.video_played = False
+        self.victory_window.video_finished = False
 
     def main_loop(self):
-        while True:
+        running = True
+        while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     terminate()
@@ -346,8 +427,9 @@ class Game:
                         btn.update(event)
                     self.info_system.handle_events(event)
 
-            if self.running:
-                keys = pygame.key.get_pressed()
+            keys = pygame.key.get_pressed()
+
+            if self.game_state == "running":
                 self.player.update(keys)
 
                 if random.random() < 0.02:
@@ -363,20 +445,34 @@ class Game:
                     self.player.catch_apple(apple)
 
                 if self.missed >= MAX_MISSED:
-                    self.running = False
+                    self.game_state = "game_over"
 
-                screen.blit(self.background, (0, 0))
+                if self.score >= 100:
+                    self.game_state = "victory"
+                    self.victory_window.show_victory = True
+                    self.victory_window.play_video()
+
+            elif self.game_state == "victory":
+                self.victory_window.update(keys)
+                if self.victory_window.video_finished and keys[pygame.K_r]:
+                    running = False
+
+            elif self.game_state == "game_over":
+                if keys[pygame.K_r]:
+                    running = False
+
+            screen.blit(self.background, (0, 0))
+            if self.game_state == "running":
                 self.all_sprites.draw(screen)
                 self.show_text(f"Счет: {self.score}", 40, 10)
                 self.show_text(f"Пропущено: {self.missed}/{MAX_MISSED}", 40, 50)
-                self.ui_elements.draw(screen)
-
-            else:
+            elif self.game_state == "victory":
+                self.victory_window.draw(screen)
+            elif self.game_state == "game_over":
                 screen.blit(self.end_image, (0, 0))
                 self.show_text(f"            {self.score}", 61, HEIGHT // 2 + 70)
-                if pygame.key.get_pressed()[pygame.K_r]:
-                    return
 
+            self.ui_elements.draw(screen)
             self.info_system.draw(screen)
             pygame.display.flip()
             self.clock.tick(60)
@@ -398,5 +494,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
