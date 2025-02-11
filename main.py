@@ -447,7 +447,7 @@ class Game:
                 if self.missed >= MAX_MISSED:
                     self.game_state = "game_over"
 
-                if self.score >= 100:
+                if self.score >= 999:
                     self.game_state = "victory"
                     self.victory_window.show_victory = True
                     self.victory_window.play_video()
